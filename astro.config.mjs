@@ -4,7 +4,7 @@ import { defineConfig } from 'astro/config';
 // site/base prefer env vars so the GitHub Pages workflow can inject them
 // from actions/configure-pages outputs without editing this file on a fork.
 // Local dev (`npm run dev`) uses the fallbacks.
-const site = process.env.PAGES_SITE || 'https://ada.example.com';
+const site = process.env.PAGES_SITE || 'https://brokengadgets.github.io/ian/';
 // actions/configure-pages emits base_path as "/repo-name" (no trailing slash).
 // Astro 6 doesn't normalize this, so import.meta.env.BASE_URL would come out
 // as "/repo-name" and string-concat code like `${BASE_URL}resume.pdf` would

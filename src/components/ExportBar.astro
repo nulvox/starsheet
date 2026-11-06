@@ -4,18 +4,20 @@
 // generated at build time by scripts/build-exports.sh and live alongside
 // index.html in dist/. No client-side document generation needed.
 const base = import.meta.env.BASE_URL; // always ends with "/"
+const { downloadBase = '' } = Astro.props;
+const prefix = downloadBase ? `${downloadBase.replace(/\/$/, '')}/` : '';
 ---
 
 <aside class="export-bar" aria-label="Download resume">
-  <a href={`${base}resume.pdf`} download class="export-btn" data-fmt="pdf">
+  <a href={`${base}${prefix}resume.pdf`} download class="export-btn" data-fmt="pdf">
     <span class="export-icon" aria-hidden="true">📄</span>
     <span class="export-label">PDF</span>
   </a>
-  <a href={`${base}resume.docx`} download class="export-btn" data-fmt="docx">
+  <a href={`${base}${prefix}resume.docx`} download class="export-btn" data-fmt="docx">
     <span class="export-icon" aria-hidden="true">📝</span>
     <span class="export-label">DOCX</span>
   </a>
-  <a href={`${base}resume.rtf`} download class="export-btn" data-fmt="rtf">
+  <a href={`${base}${prefix}resume.rtf`} download class="export-btn" data-fmt="rtf">
     <span class="export-icon" aria-hidden="true">📃</span>
     <span class="export-label">RTF</span>
   </a>

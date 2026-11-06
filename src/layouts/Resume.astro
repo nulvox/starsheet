@@ -6,7 +6,7 @@ import ExportBar from '../components/ExportBar.astro';
 import '../styles/resume.css';
 import '../styles/print.css';
 
-const { frontmatter } = Astro.props;
+const { frontmatter, downloadBase = '' } = Astro.props;
 const {
   name,
   title,
@@ -29,7 +29,7 @@ const {
     <link rel="canonical" href={website} />
   </head>
   <body>
-    <ExportBar />
+    <ExportBar downloadBase={downloadBase} />
 
     <main class="resume">
       <header class="resume-header">

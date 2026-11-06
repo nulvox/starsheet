@@ -1,0 +1,24 @@
+---
+// Role-specific resume routes generated from resume-*.md files.
+import Resume from '../layouts/Resume.astro';
+
+export function getStaticPaths() {
+  const resumes = import.meta.glob('../content/resume-*.md', { eager: true });
+  return Object.entries(resumes)
+    .map(([path, module]) => {
+      const match = path.match(/resume-(.+)\.md$/);
+      const variant = match?.[1];
+      if (!variant || variant === 'general') return null;
+      return { params: { variant }, props: { resume: module } };
+    })
+    .filter(Boolean);
+}
+
+const { resume } = Astro.props;
+const variant = Astro.params.variant;
+const { Content, frontmatter } = resume;
+---
+
+<Resume frontmatter={frontmatter} downloadBase={variant}>
+  <Content />
+</Resume>
