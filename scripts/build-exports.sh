@@ -1,65 +1,110 @@
 #!/usr/bin/env bash
-# Build downloadable exports for the general resume and every role-specific
-# resume in src/content/resume-*.md. The comprehensive version is retained as
-# a published, full-history option rather than being used as the default.
+# scripts/build-exports.sh
+# Runs after `astro build` has populated dist/. Generates:
+#   dist/resume.pdf  via WeasyPrint (rendered HTML → PDF)
+#   dist/resume.docx via Pandoc (markdown → DOCX, with reference styling)
+#   dist/resume.rtf  via Pandoc (markdown → RTF)
+#
+# All three include a "View online" back-link to SITE_URL. The HTML build
+# already lives at dist/index.html.
+
 set -euo pipefail
 
-SITE_URL="${SITE_URL:-https://brokengadgets.github.io/ian/}"
+SITE_URL="${SITE_URL:-https://ada.example.com}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIST="$ROOT/dist"
+SRC_MD="$ROOT/src/content/resume.md"
+FOOTER="$ROOT/templates/footer.md"
 REF_DOCX="$ROOT/templates/reference.docx"
 
-mkdir -p "$DIST" "$ROOT/templates"
+mkdir -p "$DIST"
 
-build_exports() {
-  local src_md="$1"
-  local slug="$2"
-  local html="$3"
-  local outdir="$4"
-  local combined
-  combined="$(mktemp --suffix=.md)"
-  trap 'rm -f "$combined"' RETURN
+# --- 1. Build the footer with the live URL baked in. -----------------------
+# templates/ may not exist on a fresh checkout (footer.md is gitignored and
+# reference.docx is optional), so make sure the directory is there first.
 
-  sed \
-    -e "s|https://brokengadgets\\.github\\.io/ian/|$SITE_URL|g" \
-    -e "s|brokengadgets\\.github\\.io/ian|${SITE_URL#https://}|g" \
-    "$src_md" > "$combined"
-  cat >> "$combined" <<EOF
-
+mkdir -p "$(dirname "$FOOTER")"
+cat > "$FOOTER" <<EOF
 ---
 
 *View the live, always-current version of this resume at <$SITE_URL>.*
 EOF
 
-  mkdir -p "$outdir"
-  echo "→ Building $slug exports"
-  local pandoc_args=(--from=markdown --metadata "title=Resume")
-  if [[ -f "$REF_DOCX" ]]; then
-    pandoc_args+=(--reference-doc="$REF_DOCX")
-  fi
-  pandoc "$combined" "${pandoc_args[@]}" --to=docx -o "$outdir/resume.docx"
-  pandoc "$combined" --from=markdown --to=rtf --standalone \
-    --metadata "title=Resume" -o "$outdir/resume.rtf"
+# --- 2. Substitute the placeholder URL in the built HTML. -----------------
+# The demo persona's URL (https://ada.example.com) is hardcoded in a few
+# places that can't be templated cleanly: src/styles/print.css's
+# @bottom-center page footer, and any leftover demo content in resume.md.
+# Replace it in the built HTML so the PDF (which WeasyPrint renders from
+# this HTML) and the published page both show the actual deploy URL.
 
-  if command -v weasyprint >/dev/null 2>&1 && [[ -f "$html" ]]; then
-    weasyprint "$html" "$outdir/resume.pdf" --base-url "$DIST/" \
-      --presentational-hints
-  else
-    echo "  WARNING: PDF not generated; install WeasyPrint and build HTML first."
-  fi
-}
+SITE_DISPLAY="${SITE_URL#https://}"
+SITE_DISPLAY="${SITE_DISPLAY#http://}"
 
-# The root URL is the general-purpose resume.
-build_exports "$ROOT/src/content/resume-general.md" general \
-  "$DIST/index.html" "$DIST"
+if [[ -f "$DIST/index.html" ]]; then
+  sed -i \
+    -e "s|https://ada\.example\.com|$SITE_URL|g" \
+    -e "s|ada\.example\.com|$SITE_DISPLAY|g" \
+    "$DIST/index.html"
+fi
 
-# Role-specific routes and the comprehensive resume each have their own assets.
-for src_md in "$ROOT"/src/content/resume-*.md; do
-  slug="${src_md##*/resume-}"
-  slug="${slug%.md}"
-  [[ "$slug" == general ]] && continue
-  build_exports "$src_md" "$slug" "$DIST/$slug/index.html" "$DIST/$slug"
-done
+# --- 3. Combine resume markdown + footer for non-HTML exports. -------------
 
-printf '\n✓ Exports built:\n'
-find "$DIST" -path '*/resume.*' -type f -printf '%p\n' | sort
+COMBINED="$(mktemp --suffix=.md)"
+trap 'rm -f "$COMBINED"' EXIT
+sed \
+  -e "s|https://ada\.example\.com|$SITE_URL|g" \
+  -e "s|ada\.example\.com|$SITE_DISPLAY|g" \
+  "$SRC_MD" > "$COMBINED"
+cat "$FOOTER" >> "$COMBINED"
+
+# --- 4. DOCX via Pandoc. ---------------------------------------------------
+
+echo "→ Building resume.docx"
+if [[ -f "$REF_DOCX" ]]; then
+  pandoc "$COMBINED" \
+    --from=markdown \
+    --to=docx \
+    --reference-doc="$REF_DOCX" \
+    --metadata "title=Resume" \
+    -o "$DIST/resume.docx"
+else
+  echo "  (no reference.docx — using Pandoc defaults; see README to customize)"
+  pandoc "$COMBINED" \
+    --from=markdown \
+    --to=docx \
+    --metadata "title=Resume" \
+    -o "$DIST/resume.docx"
+fi
+
+# --- 5. RTF via Pandoc. ----------------------------------------------------
+
+echo "→ Building resume.rtf"
+pandoc "$COMBINED" \
+  --from=markdown \
+  --to=rtf \
+  --standalone \
+  --metadata "title=Resume" \
+  -o "$DIST/resume.rtf"
+
+# --- 6. PDF via WeasyPrint, from the rendered HTML. ------------------------
+# Using the actual built HTML means the PDF matches the website exactly.
+# WeasyPrint reads our @page rules in print.css for headers/footers/margins.
+
+echo "→ Building resume.pdf"
+if command -v weasyprint >/dev/null 2>&1; then
+  weasyprint "$DIST/index.html" "$DIST/resume.pdf" \
+    --base-url "$DIST/" \
+    --presentational-hints
+else
+  echo "  WARNING: weasyprint not installed; falling back to Pandoc PDF."
+  echo "  Install with: pip install weasyprint  (or: nix develop)"
+  pandoc "$COMBINED" \
+    --from=markdown \
+    --pdf-engine=weasyprint \
+    -o "$DIST/resume.pdf" \
+    || echo "  PDF generation failed — install weasyprint or a LaTeX engine."
+fi
+
+echo ""
+echo "✓ Exports built:"
+ls -lh "$DIST"/resume.* 2>/dev/null || true

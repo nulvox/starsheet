@@ -1,4 +1,4 @@
-SITE_URL ?= https://brokengadgets.github.io/ian/
+SITE_URL ?= https://ada.example.com
 
 .PHONY: all build dev clean install exports html
 
