@@ -10,6 +10,13 @@ online" link back to the canonical URL.
 Demo content lives in `src/content/resume.md` and renders as a fictional
 resume so you can see what the output looks like before customizing.
 
+**[View the live demo](https://nulvox.github.io/starsheet/)**
+
+[![Rendered starsheet demo resume](public/starsheet-preview.png)](https://nulvox.github.io/starsheet/)
+
+The preview is the same responsive HTML used to generate the print-ready PDF;
+the live export bar also provides DOCX and RTF downloads from the same source.
+
 ## Make this your own resume
 
 1. On [github.com/nulvox/starsheet](https://github.com/nulvox/starsheet),
@@ -33,7 +40,9 @@ resume so you can see what the output looks like before customizing.
    time, so you don't need to edit `src/styles/print.css` by hand.
 4. (Optional) Customize the DOCX look: see `templates/README.md`.
 5. Build locally: `make` produces `dist/index.html` plus
-   `resume.{pdf,docx,rtf}`.
+   `resume.{pdf,docx,rtf}`. To export just the browser-rendered page to PDF,
+   open the live/local page and choose **Print → Save as PDF**; the dedicated
+   print stylesheet removes the export controls and applies paged-media rules.
 6. Deploy. Two options:
    - **GitHub Pages** (auto): in your repo, go to **Settings → Pages** and
      set **Source: GitHub Actions**. Push to `main` and the included
